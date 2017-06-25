@@ -10,8 +10,13 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.particles.values.RectangleSpawnShapeValue;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.TimeUtils;
+
+import java.util.Iterator;
 
 public class MyGdxGame extends ApplicationAdapter {
 	OrthographicCamera camera;
@@ -22,6 +27,9 @@ public class MyGdxGame extends ApplicationAdapter {
 	Music rainMusic;
 	Rectangle bucket;
 	Vector3 touchPos;
+    Array<Rectangle> raindrops;
+    long lastDropTime;
+
 
 	
 	@Override
@@ -49,7 +57,25 @@ public class MyGdxGame extends ApplicationAdapter {
 		bucket.width = 64;
 		bucket.height = 64;
 
+        raindrops = new Array<Rectangle>();
+        spawnRaindrop();
+
 	}
+
+
+
+	private void spawnRaindrop(){
+
+        Rectangle rainDrop = new Rectangle();
+        rainDrop.x = MathUtils.random(0, 800-64);
+        rainDrop.y = 480;
+        rainDrop.width = 64;
+        rainDrop.height = 64;
+        raindrops.add(rainDrop);
+        lastDropTime = TimeUtils.nanoTime();
+    }
+
+
 
 	@Override
 	public void render () {
@@ -62,6 +88,11 @@ public class MyGdxGame extends ApplicationAdapter {
 
 		batch.begin();
 		batch.draw(bucketImage, bucket.x, bucket.y);
+
+        for (Rectangle raindrop: raindrops){
+            batch.draw(dropImage, raindrop.x, raindrop.y);
+        }
+
 		batch.end();
 
 
@@ -75,12 +106,31 @@ public class MyGdxGame extends ApplicationAdapter {
 		if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) bucket.x -= 200 * Gdx.graphics.getDeltaTime();
         if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) bucket.x += 200 * Gdx.graphics.getDeltaTime();
 
+        if (bucket.x < 0) bucket.x = 0;
+        if (bucket.x > 800 - 64) bucket.x = 800 - 64;
+
+        if (TimeUtils.nanoTime() - lastDropTime > 1000000000) spawnRaindrop();
+
+        Iterator<Rectangle> iter = raindrops.iterator();
+        while (iter.hasNext()){
+            Rectangle raindrop = iter.next();
+            raindrop.y -= 200 * Gdx.graphics.getDeltaTime();
+            if (raindrop.y + 64 < 0) iter.remove();
+            if (raindrop.overlaps(bucket)){
+                dropSound.play();
+                iter.remove();
+            }
+
+        }
+
+
 
 
 	}
 	
 	@Override
 	public void dispose () {
+        super.dispose();
 		batch.dispose();
 		dropImage.dispose();
 		bucketImage.dispose();
